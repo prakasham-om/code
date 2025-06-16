@@ -1,7 +1,8 @@
 [
   {
     "origin": [
-      "*"
+      "*",
+      "https://code-seven-jet.vercel.app/"
     ],
     "method": ["GET", "POST", "PUT", "DELETE"],
     "maxAgeSeconds": 3600,
