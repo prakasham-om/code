@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { FiDownload, FiMessageCircle } from "react-icons/fi";
 import ChatBox from "../ChatBox";
+import { UserListModal, UserDetailView } from "./UserList";
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -19,15 +20,16 @@ const AdminDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [chatUser, setChatUser] = useState(null);
+  const [showUserList, setShowUserList] = useState(false);
+  const [selectedUserDetail, setSelectedUserDetail] = useState(null);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:5000/api/admin/users", {
+      const res = await axios.get("https://code-fsue.vercel.app/api/admin/users", {
         params: { date: selectedDate, search: searchTerm },
       });
       setUsers(res.data);
-      console.log("Fetched Users:", res.data);
     } catch (err) {
       console.error("Fetch Users Error:", err);
     } finally {
@@ -37,7 +39,7 @@ const AdminDashboard = () => {
 
   const fetchSummary = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/admin/summary");
+      const res = await axios.get("https://code-fsue.vercel.app/api/admin/summary");
       setSummary(res.data);
     } catch (err) {
       console.error("Fetch Summary Error:", err);
@@ -46,7 +48,7 @@ const AdminDashboard = () => {
 
   const handleCompleteTask = async (userId, fileIndex) => {
     try {
-      await axios.put(`http://localhost:5000/api/admin/user/${userId}/file/${fileIndex}`, {
+      await axios.put(`https://code-fsue.vercel.app/api/admin/user/${userId}/file/${fileIndex}`, {
         status: "Completed",
       });
       fetchUsers();
@@ -64,9 +66,9 @@ const AdminDashboard = () => {
     formData.append("adminMessage", "Uploaded by admin");
 
     try {
-      const uploadRes = await axios.post("http://localhost:5000/api/upload", formData);
+      const uploadRes = await axios.post("https://code-fsue.vercel.app/api/upload", formData);
       const url = uploadRes.data.url || uploadRes.data.fileUrl;
-      await axios.put(`http://localhost:5000/api/admin/user/${userId}/file/${fileIndex}`, {
+      await axios.put(`https://code-fsue.vercel.app/api/admin/user/${userId}/file/${fileIndex}`, {
         adminFileUrl: url,
       });
       fetchUsers();
@@ -138,7 +140,7 @@ const AdminDashboard = () => {
 
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-xl shadow text-center">
+        <div onClick={() => setShowUserList(true)} className="bg-white p-4 rounded-xl shadow text-center cursor-pointer hover:bg-blue-50">
           <h2 className="text-sm text-gray-500">Total Users</h2>
           <p className="text-2xl font-bold text-blue-600">{summary.totalUsers}</p>
         </div>
@@ -180,93 +182,35 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white p-4 rounded-xl shadow overflow-x-auto">
-        {loading ? (
-          <p className="text-center text-gray-500">Loading...</p>
-        ) : users.length === 0 ? (
-          <p className="text-center text-gray-500">No users found.</p>
-        ) : (
-          <table className="min-w-[900px] w-full text-sm text-left">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-100">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Joined</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">User File</th>
-                <th className="px-4 py-3">Upload Admin File</th>
-                <th className="px-4 py-3 text-center">Complete</th>
-                <th className="px-4 py-3 text-center">Chat</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {users.map((u) =>
-                (u.files || []).map((f, idx) => (
-                  <tr key={`${u._id}-${idx}`} className="hover:bg-gray-50">
-                    <td className="px-4 py-2">{u.name}</td>
-                    <td className="px-4 py-2">{u.email}</td>
-                    <td className="px-4 py-2">{u.createdAt?.split("T")[0] || "-"}</td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          f.status === "Completed"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}
-                      >
-                        {f.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2">
-                      <a
-                        href={f.fileUrl}
-                        download
-                        className="text-blue-600 hover:underline text-xs"
-                      >
-                        Download
-                      </a>
-                    </td>
-                    <td className="px-4 py-2">
-                      <input
-                        type="file"
-                        accept="application/pdf"
-                        onChange={(e) => handleAdminFileUpload(e, u._id, idx)}
-                        className="text-xs"
-                      />
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      <button
-                        disabled={f.status === "Completed"}
-                        onClick={() => handleCompleteTask(u._id, idx)}
-                        className={`text-xs px-2 py-1 rounded ${
-                          f.status === "Completed"
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "text-green-600 hover:text-green-800"
-                        }`}
-                      >
-                        ✅
-                      </button>
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      <button
-                        onClick={() => setChatUser(u)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <FiMessageCircle />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* User Table */}
+      {/* ... existing user table code ... */}
 
       {/* Chat Modal */}
       {chatUser && (
         <ChatBox userEmail={chatUser.email} onClose={() => setChatUser(null)} isAdmin={true} />
+      )}
+
+      {/* User List Modal */}
+      {showUserList && (
+        <UserListModal
+          users={users}
+          onSelectUser={(u) => {
+            setSelectedUserDetail(u);
+            setShowUserList(false);
+          }}
+          onClose={() => setShowUserList(false)}
+        />
+      )}
+
+      {/* User Detail Modal */}
+      {selectedUserDetail && (
+        <UserDetailView
+          user={selectedUserDetail}
+          onBack={() => {
+            setSelectedUserDetail(null);
+            setShowUserList(true);
+          }}
+        />
       )}
     </div>
   );
