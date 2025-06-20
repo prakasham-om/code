@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { IoSend, IoClose } from "react-icons/io5";
 import io from "socket.io-client";
 
-const socket = io("http://localhost:5000"); // Adjust if backend URL changes
+const socket = io("https://code-fsue.vercel.app"); // Adjust if backend URL changes
 
 const ADMIN_EMAIL = "rohitsahoo866@gmail.com";
 
@@ -29,7 +29,7 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
         const receiver = isAdmin ? userEmail : ADMIN_EMAIL;
 
         const res = await fetch(
-          `http://localhost:5000/api/messages?user1=${sender}&user2=${receiver}`
+          `https://code-fsue.vercel.app/api/messages?user1=${sender}&user2=${receiver}`
         );
         const data = await res.json();
         setMessages(data);
