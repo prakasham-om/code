@@ -1,108 +1,83 @@
-const dotenv = require("dotenv").config();
-const Stripe = require("stripe");
 const express = require("express");
+const mongoose = require("mongoose");
+const http = require("http");
+const { Server } = require("socket.io");
 const cors = require("cors");
+const dotenv = require("dotenv");
+
+dotenv.config();
+
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: "http://localhost:3000", methods: ["GET", "POST"] },
+});
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
-// https://restaurant-e-commerce-server.vercel.app/webhook
-const PORT = process.env.PORT || 8080;
-const YOUR_DOMAIN = "https://restaurant-e-commerce-website-omega.vercel.app/"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// MongoDB connection
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => {
+  const PORT = process.env.PORT || 5000;
+  server.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+}).catch(err => console.error("❌ MongoDB connection error:", err));
 
-app.post("/create-checkout-session", async (req, res) => {
-  console.log(req.body);
-    try{
-        const params = {
-            submit_type: "pay",
-            mode: "payment",
-            payment_method_types: ["card"],
-            billing_address_collection: "auto",
-            shipping_options: [{ shipping_rate: "shr_1MJTX8SHnOGYGLnPO1haAXqp" }],
-            customer_email : req?.body?.email,
-            line_items: req.body.map((item) => {
-              return {
-                price_data: {
-                  currency: "inr",
-                  product_data: {
-                    name: item.title,
-                    images: [item.imgURL],
-                  },
-                  unit_amount: item.price * 100,
-                },
-                adjustable_quantity: {
-                  enabled: true,
-                  minimum: 1,
-                },
-                quantity: item.qty,
-              };
-            }),
-        
-            //mode: "payment",
-            success_url: `${YOUR_DOMAIN}success`,
-            cancel_url: `${YOUR_DOMAIN}canceled`,
-          };
+// Routes
+const adminRoutes = require("./routes/adminRoute");
+const userRoutes = require("./routes/userRoute");
+const chatRoutes = require("./routes/chatRoutes");
 
-          const session = await stripe.checkout.sessions.create(params);
-          res.status(200).json(session.id)
-        //   res.redirect(303, session.url);
-    }catch(err){
-        res.status(err.statusCode || 500).json(err.message);
+app.use("/api", adminRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/messages", chatRoutes);
+
+// Socket.io
+const Message = require("./model/Chat");
+const connected = {}; // email -> socket.id
+
+io.on("connection", (socket) => {
+  console.log("🟢 Socket connected:", socket.id);
+
+  socket.on("join", ({ email }) => {
+    connected[email] = socket.id;
+    console.log(`📲 ${email} joined chat`);
+  });
+
+  socket.on("send_message", async ({ sender, receiver, message }) => {
+    if (!sender || !receiver || !message) {
+      console.log("❌ Missing chat data");
+      return;
     }
- 
+
+    try {
+      const newMsg = new Message({
+        sender,
+        receiver,
+        message,
+        timestamp: new Date()
+      });
+      await newMsg.save();
+      console.log("💾 Message saved:", newMsg);
+
+      const receiverSocketId = connected[receiver];
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("receive_message", {
+          sender,
+          message,
+          timestamp: newMsg.timestamp
+        });
+      }
+    } catch (err) {
+      console.error("❌ Failed to save message:", err.message);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    const email = Object.keys(connected).find(e => connected[e] === socket.id);
+    if (email) delete connected[email];
+    console.log("🔴 Socket disconnected:", socket.id);
+  });
 });
-
-
-// This is your Stripe CLI webhook secret for testing your endpoint locally.
-const endpointSecret = "whsec_eb4a5f8d2421cf7cafafc42199c2f362e38a3d53865f35a5c6066cb25c31c439";
-
-app.post('/webhook', express.raw({type: 'application/json'}), (request, response) => {
-  const sig = request.headers['stripe-signature'];
-
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
-  } catch (err) {
-    response.status(400).send(`Webhook Error: ${err.message}`);
-    return;
-  }
-
-  // Handle the event
-  switch (event.type) {
-    case 'checkout.session.async_payment_failed':
-      const checkoutSessionAsyncPaymentFailed = event.data.object;
-      console.log("checkoutSessionAsyncPaymentFailed",checkoutSessionAsyncPaymentFailed)
-      // Then define and call a function to handle the event checkout.session.async_payment_failed
-      break;
-    case 'checkout.session.async_payment_succeeded':
-      const checkoutSessionAsyncPaymentSucceeded = event.data.object;
-      console.log("checkoutSessionAsyncPaymentSucceeded",checkoutSessionAsyncPaymentSucceeded)
-      // Then define and call a function to handle the event checkout.session.async_payment_succeeded
-      break;
-    case 'checkout.session.completed':
-      const checkoutSessionCompleted = event.data.object;
-      console.log("checkoutSessionCompleted",checkoutSessionCompleted)
-      // Then define and call a function to handle the event checkout.session.completed
-      break;
-    case 'checkout.session.expired':
-      const checkoutSessionExpired = event.data.object;
-      console.log("checkoutSessionExpired",checkoutSessionExpired)
-      // Then define and call a function to handle the event checkout.session.expired
-      break;
-    // ... handle other event types
-    default:
-      console.log(`Unhandled event type ${event.type}`);
-  }
-
-  // Return a 200 response to acknowledge receipt of the event
-  response.send();
-});
-
-
-
-
-app.listen(PORT, () => console.log("Running on port " + PORT));

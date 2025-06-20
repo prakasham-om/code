@@ -1,24 +1,19 @@
 import React, { useState } from "react";
-import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
 import { app } from "../firebase.config";
 import { useSelector, useDispatch } from "react-redux";
 import { setLoginGoogle } from "../redux/userSlice";
 import { Link, NavLink } from "react-router-dom";
-import { motion } from "framer-motion";
+
 import {
-  MdShoppingCart,
   MdAccountCircle,
   MdLogout,
-  MdAddCircleOutline,
-  MdVerified,
-  MdAdminPanelSettings,
-  MdPerson,
 } from "react-icons/md";
+import { motion } from "framer-motion";
 import Logo from "./Logo";
 
 const Header = () => {
   const user = useSelector((state) => state.user);
-  const cartProductNumber = useSelector((state) => state.cartProduct.cartProductItem).length;
   const dispatch = useDispatch();
   const [isLogin, setIsLogin] = useState(false);
 
@@ -47,9 +42,16 @@ const Header = () => {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
-    dispatch(setLoginGoogle({ name: "", img: "", email: "", uid: "", token: "" }));
-    setIsLogin(false);
+    const auth = getAuth(app);
+    signOut(auth)
+      .then(() => {
+        localStorage.clear();
+        dispatch(setLoginGoogle({ name: "", img: "", email: "", uid: "", token: "" }));
+        setIsLogin(false);
+      })
+      .catch((error) => {
+        console.error("Logout error:", error);
+      });
   };
 
   const navLinkClass = ({ isActive }) =>
@@ -57,49 +59,26 @@ const Header = () => {
       isActive ? "text-red-600 font-semibold" : "text-gray-700"
     }`;
 
-  const isAdmin = process.env.REACT_APP_ADMIN_ID === user.email;
-
   return (
     <header className="fixed top-0 left-0 w-full bg-white shadow-md z-50">
       {/* Desktop Header */}
-      <div className="hidden md:flex justify-between items-center px-6 py-3">
+      <div className="hidden md:flex justify-between items-center px-2 py-3">
         <Link to="/" className="flex items-center gap-2" onClick={() => window.scrollTo({ top: 0 })}>
           <Logo />
         </Link>
 
-        <nav className="flex items-center gap-8">
-          <NavLink to="/" className={navLinkClass} end>
-            Home
-          </NavLink>
-          <NavLink to="/about" className={navLinkClass}>
-            About Us
-          </NavLink>
-          <NavLink to="/service" className={navLinkClass}>
-            Service
-          </NavLink>
-        </nav>
-
         <div className="flex items-center gap-6 relative">
-          {user.email && (
-            <div className="flex items-center gap-2 text-sm text-red-600">
-              <MdVerified />
-              <p>{user.name}</p>
-              {isAdmin && (
-                <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full">Admin</span>
-              )}
-            </div>
-          )}
-
-          {user.email && (
-            <Link to="/cart" className="relative">
-              <MdShoppingCart className="text-2xl text-gray-700" />
-              {cartProductNumber > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                  {cartProductNumber}
-                </span>
-              )}
-            </Link>
-          )}
+          <nav className="flex items-center gap-4">
+            <NavLink to="/" className={navLinkClass} end>
+              Home
+            </NavLink>
+            <NavLink to="/about" className={navLinkClass}>
+              About Us
+            </NavLink>
+            <NavLink to="/service" className={navLinkClass}>
+              Service
+            </NavLink>
+          </nav>
 
           <motion.div
             whileTap={{ scale: 0.9 }}
@@ -121,44 +100,6 @@ const Header = () => {
               className="absolute top-14 right-0 bg-white shadow-xl rounded-md z-50 w-52"
             >
               <ul className="text-sm text-gray-800 py-2">
-                <li className="px-4 py-2 flex items-center gap-2 font-semibold">
-                  <MdPerson /> {user.name}
-                </li>
-
-                <li>
-                  <Link
-                    to="/profile"
-                    className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsLogin(false)}
-                  >
-                    <MdAccountCircle /> Profile
-                  </Link>
-                </li>
-
-                {isAdmin && (
-                  <>
-                    <li>
-                      <Link
-                        to="/admin/dashboard"
-                        className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-red-600"
-                        onClick={() => setIsLogin(false)}
-                      >
-                        <MdAdminPanelSettings /> Admin Panel
-                      </Link>
-                    </li>
-
-                    <li>
-                      <Link
-                        to="/createitem"
-                        className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100"
-                        onClick={() => setIsLogin(false)}
-                      >
-                        <MdAddCircleOutline /> New Item
-                      </Link>
-                    </li>
-                  </>
-                )}
-
                 <li>
                   <button
                     onClick={handleLogout}
@@ -180,16 +121,6 @@ const Header = () => {
         </Link>
 
         <div className="flex items-center gap-4 relative">
-          {user.email && (
-            <Link to="/cart" className="relative">
-              <MdShoppingCart className="text-2xl text-gray-700" />
-              {cartProductNumber > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                  {cartProductNumber}
-                </span>
-              )}
-            </Link>
-          )}
           <motion.div
             whileTap={{ scale: 0.9 }}
             onClick={handleLogin}
@@ -221,23 +152,10 @@ const Header = () => {
             <NavLink to="/service" className={navLinkClass} onClick={() => setIsLogin(false)}>
               Service
             </NavLink>
-
-            <Link to="/profile" className="text-sm text-gray-700 hover:text-blue-600" onClick={() => setIsLogin(false)}>
-              Profile
-            </Link>
-
-            {isAdmin && (
-              <>
-                <Link to="/admin/dashboard" className="text-sm text-red-600" onClick={() => setIsLogin(false)}>
-                  Admin Panel
-                </Link>
-                <Link to="/createitem" className="text-sm" onClick={() => setIsLogin(false)}>
-                  New Item
-                </Link>
-              </>
-            )}
-
-            <button onClick={handleLogout} className="text-sm text-red-600 text-left hover:underline">
+            <button
+              onClick={handleLogout}
+              className="text-sm text-red-600 text-left hover:underline"
+            >
               Logout ({user.name?.split(" ")[0]})
             </button>
           </ul>

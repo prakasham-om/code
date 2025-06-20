@@ -40,7 +40,7 @@ const About = () => {
         <div className="max-w-5xl mx-auto text-center space-y-8">
           <h2 className="text-3xl font-bold text-pink-400">👤 Owner & Vision</h2>
           <p className="text-lg text-gray-200 max-w-3xl mx-auto leading-relaxed">
-            <strong className="text-white">Mr. Prakash Chandra Sahoo</strong> is the founder of JB Internet. His mission is to transform local digital services
+            <strong className="text-white">Mr. Prasant Kumar Dalabehera</strong> is the founder of JB Internet. His mission is to transform local digital services
             into smart, tech-powered experiences for everyone. With a focus on speed, quality, and trust, JB Internet
             leads the future of printing, application processing, and digital support.
           </p>
