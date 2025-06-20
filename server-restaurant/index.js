@@ -9,6 +9,8 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
+
+app.use(cors({ origin: "https://your-frontend.vercel.app" }));
 const io = new Server(server, {
   cors: { origin: "https://code-fsue.vercel.app/", methods: ["GET", "POST"] },
 });
