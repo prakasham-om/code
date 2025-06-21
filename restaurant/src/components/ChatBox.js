@@ -17,7 +17,7 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
   useEffect(() => {
     if (!userEmail) return;
 
-    socketRef.current = io("https://code-fsue.vercel.app", {
+    socketRef.current = io("https://code-3oqu.onrender.com", {
       withCredentials: true,
       transports: ["polling"],
       upgrade: false
@@ -33,7 +33,7 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
         const receiver = isAdmin ? userEmail : ADMIN_EMAIL;
 
         const res = await fetch(
-          `https://code-fsue.vercel.app/api/messages?user1=${sender}&user2=${receiver}`
+          `https://code-3oqu.onrender.com/api/messages?user1=${sender}&user2=${receiver}`
         );
         const data = await res.json();
         setMessages(data);
