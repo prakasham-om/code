@@ -10,7 +10,7 @@ const UserListModal = ({ onClose, onSelectUser }) => {
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        const res = await axios.get("https://code-fsue.vercel.app/api/admin/users");
+        const res = await axios.get("https://code-3oqu.onrender.com/api/admin/users");
         setUsers(res.data);
       } catch (err) {
         console.error("Fetch Users Error:", err);
