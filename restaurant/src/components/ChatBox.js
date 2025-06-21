@@ -3,7 +3,11 @@ import { motion } from "framer-motion";
 import { IoSend, IoClose } from "react-icons/io5";
 import io from "socket.io-client";
 
-const socket = io("https://code-fsue.vercel.app"); // Adjust if backend URL changes
+const socket = const socket = io("https://code-fsue.vercel.app", {
+  withCredentials: true,
+  transports: ["polling"]
+});
+// Adjust if backend URL changes
 
 const ADMIN_EMAIL = "rohitsahoo866@gmail.com";
 
