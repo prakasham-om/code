@@ -10,9 +10,9 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-app.use(cors({ origin: "code-git-master-rohis-projects-40be3d9d.vercel.app" }));
+app.use(cors({ origin: "https://code-seven-jet.vercel.app/" }));
 const io = new Server(server, {
-  cors: { origin: "https://code-fsue.vercel.app/", methods: ["GET", "POST"] },
+  cors: { origin: "https://code-seven-jet.vercel.app/", methods: ["GET", "POST"] },
 });
 
 app.use(cors());
