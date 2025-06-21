@@ -56,7 +56,7 @@ const Home = () => {
 
   if (loading) return <p className="text-center mt-20 text-gray-500">Checking login...</p>;
 
-  if (userEmail === "rohitsahoo866@gmail.com") return <AdminDashboard key={userEmail} />;
+  if (userEmail === "jbinternet143@gmail.com") return <AdminDashboard key={userEmail} />;
   if (userEmail) return <UserDashboard key={userEmail} />;
 
   return (
