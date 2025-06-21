@@ -57,7 +57,7 @@ const UserDashboard = () => {
       // ✅ Get Firebase ID token
       const token = await user.getIdToken();
 
-      const res = await axios.post("https://code-3oqu.onrender.comapi/users/upload", formData);
+      const res = await axios.post("https://code-3oqu.onrender.com/api/users/upload", formData);
 
       setUploads((prev) => [...prev, ...res.data.uploads]);
       alert("Uploaded successfully");
