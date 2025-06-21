@@ -46,53 +46,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleCompleteTask = async (userId, fileIndex) => {
-    try {
-      await axios.put(`https://code-fsue.vercel.app/api/admin/user/${userId}/file/${fileIndex}`, {
-        status: "Completed",
-      });
-      fetchUsers();
-      fetchSummary();
-    } catch (err) {
-      console.error("Complete Task Error:", err);
-    }
-  };
-
-  const handleAdminFileUpload = async (e, userId, fileIndex) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append("adminFile", file);
-    formData.append("adminMessage", "Uploaded by admin");
-
-    try {
-      const uploadRes = await axios.post("https://code-fsue.vercel.app/api/upload", formData);
-      const url = uploadRes.data.url || uploadRes.data.fileUrl;
-      await axios.put(`https://code-fsue.vercel.app/api/admin/user/${userId}/file/${fileIndex}`, {
-        adminFileUrl: url,
-      });
-      fetchUsers();
-    } catch (err) {
-      console.error("Admin File Upload Error:", err);
-    }
-  };
-
-  const exportCSV = () => {
-    const rows = [["Name", "Email", "Joined", "Status"]];
-    users.forEach((u) => {
-      const joined = u.createdAt?.split("T")[0] || "N/A";
-      const statuses = (u.files || []).map((f) => f.status).join("|") || "No files";
-      rows.push([u.name, u.email, joined, statuses]);
-    });
-    const csv = "data:text/csv;charset=utf-8," + rows.map((r) => r.join(",")).join("\n");
-    const link = document.createElement("a");
-    link.href = encodeURI(csv);
-    link.download = `users-${selectedDate}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const chartData = Object.values(
     users.reduce((map, u) => {
       const date = u.createdAt?.split("T")[0] || "Unknown";
@@ -111,51 +64,11 @@ const AdminDashboard = () => {
   }, [selectedDate, searchTerm]);
 
   return (
-    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen text-gray-800">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold">📊 Admin Dashboard</h1>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="border px-3 py-1.5 rounded shadow-sm text-sm"
-          />
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="border px-3 py-1.5 rounded shadow-sm text-sm"
-          />
-          <button
-            onClick={exportCSV}
-            className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700"
-          >
-            <FiDownload /> CSV
-          </button>
-        </div>
-      </div>
-
-      {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div onClick={() => setShowUserList(true)} className="bg-white p-4 rounded-xl shadow text-center cursor-pointer hover:bg-blue-50">
-          <h2 className="text-sm text-gray-500">Total Users</h2>
-          <p className="text-2xl font-bold text-blue-600">{summary.totalUsers}</p>
-        </div>
-        <div className="bg-white p-4 rounded-xl shadow text-center">
-          <h2 className="text-sm text-gray-500">Completed Tasks</h2>
-          <p className="text-2xl font-bold text-green-600">{summary.completedTasks}</p>
-        </div>
-        <div className="bg-white p-4 rounded-xl shadow text-center">
-          <h2 className="text-sm text-gray-500">Revenue</h2>
-          <p className="text-2xl font-bold text-purple-600">₹ {summary.revenue}</p>
-        </div>
-      </div>
+    <div className="p-4 sm:p-6 bg-gradient-to-b from-gray-50 to-white min-h-screen text-gray-800">
+      <h1 className="text-3xl sm:text-4xl font-extrabold mb-6 text-center">📊 Admin Dashboard</h1>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="bg-white p-4 rounded-xl shadow">
           <h3 className="text-lg font-semibold mb-3">📈 User Growth</h3>
           <ResponsiveContainer width="100%" height={250}>
@@ -183,7 +96,53 @@ const AdminDashboard = () => {
       </div>
 
       {/* User Table */}
-      {/* ... existing user table code ... */}
+      <div className="bg-white shadow rounded-xl overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-blue-600 text-white">
+            <tr>
+              <th className="px-4 py-2 text-left">Name</th>
+              <th className="px-4 py-2 text-left">Email</th>
+              <th className="px-4 py-2 text-left">Files</th>
+              <th className="px-4 py-2 text-center">Chat</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.length === 0 ? (
+              <tr>
+                <td colSpan="4" className="text-center py-6 text-gray-500">
+                  No users found.
+                </td>
+              </tr>
+            ) : (
+              users.map((user, index) => (
+                <tr key={index} className="border-t hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium">{user.name || "N/A"}</td>
+                  <td className="px-4 py-3">{user.email}</td>
+                  <td className="px-4 py-3">
+                    {user.files?.length > 0 ? (
+                      <ul className="list-disc ml-4">
+                        {user.files.map((f, i) => (
+                          <li key={i}>{f.fileName || "Unnamed"} - <span className={`text-sm ${f.status === "Completed" ? "text-green-600" : "text-red-500"}`}>{f.status}</span></li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="text-gray-400">No files</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => setChatUser(user)}
+                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      <FiMessageCircle /> Chat
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {/* Chat Modal */}
       {chatUser && (
