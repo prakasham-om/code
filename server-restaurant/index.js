@@ -30,7 +30,7 @@ app.use(express.json());
 // Routes (unchanged)
 const adminRoutes = require("./routes/adminRoute");
 const userRoutes = require("./routes/userRoute");
-const chatRoutes = require("./routes/chatRoute");
+const chatRoutes = require("./routes/chatRoutes");
 
 app.use("/api", adminRoutes);
 app.use("/api/user", userRoutes);
