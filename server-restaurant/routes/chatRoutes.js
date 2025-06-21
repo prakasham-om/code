@@ -1,28 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const Message = require("../model/Chat");
+const chatController = require("../controllers/chatController");
 
-const ADMIN_EMAIL = "rohitsahoo866@gmail.com";
+// GET /api/messages?user1=email1&user2=email2
+router.get("/", chatController.getMessages);
 
-router.get("/:userEmail", async (req, res) => {
-  const userEmail = req.params.userEmail;
+// POST /api/messages
+router.post("/", chatController.createMessage);
 
-  try {
-    const messages = await Message.find({
-      $or: [
-        { sender: userEmail, receiver: ADMIN_EMAIL },
-        { sender: ADMIN_EMAIL, receiver: userEmail },
-      ],
-    }).sort("timestamp");
-
-    res.json(messages.map((msg) => ({
-      sender: msg.sender,
-      message: msg.decryptedMessage,
-      timestamp: msg.timestamp,
-    })));
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch messages" });
-  }
-});
+// DELETE /api/messages/:id
+router.delete("/:id", chatController.deleteMessage);
 
 module.exports = router;
