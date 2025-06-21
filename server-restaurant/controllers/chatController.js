@@ -1,6 +1,6 @@
 
 const Message = require("../models/Chat");
-const { encrypt, decrypt } = require("../utils/cryptoUtil");
+const { encrypt, decrypt } = require("../util/cryptoUtil");
 
 // Get messages between two users
 exports.getMessages = async (req, res) => {
