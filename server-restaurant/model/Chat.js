@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { encrypt, decrypt } = require("../util/cryptoUtil");
+const { encrypt, decrypt } = require("../utils/cryptoUtil");
 
 const messageSchema = new mongoose.Schema({
   sender: { type: String, required: true },
@@ -8,23 +8,26 @@ const messageSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now },
 });
 
-// Virtual to auto-decrypt
-messageSchema.virtual("decryptedMessage").get(function () {
-  try {
-    return decrypt(this.encryptedMessage);
-  } catch {
-    return "Decryption failed";
+// Pre-save hook to encrypt message
+messageSchema.pre("save", function(next) {
+  if (this.isModified("message")) {
+    this.encryptedMessage = encrypt(this.message);
   }
+  next();
 });
 
-// Virtual for incoming plain text
+// Virtual for decrypted message
+messageSchema.virtual("decryptedMessage").get(function() {
+  return decrypt(this.encryptedMessage);
+});
+
+// Virtual for plain text message (for input)
 messageSchema.virtual("message")
-  .set(function (val) {
-    this._message = val;
-    this.encryptedMessage = encrypt(val);
+  .set(function(value) {
+    this._message = value;
   })
-  .get(function () {
+  .get(function() {
     return this._message;
   });
 
-module.exports = mongoose.model("Chat", messageSchema); // Changed from "Message" to "Chat"
+module.exports = mongoose.model("Chat", messageSchema);
