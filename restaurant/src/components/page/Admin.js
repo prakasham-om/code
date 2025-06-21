@@ -9,7 +9,7 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from "recharts";
-import { FiDownload, FiMessageCircle, FiChevronDown, FiChevronUp, FiUser } from "react-icons/fi";
+import { FiDownload, FiMessageCircle, FiChevronDown, FiChevronUp, FiUser, FiTrash2 } from "react-icons/fi";
 import ChatBox from "../ChatBox";
 
 const AdminDashboard = () => {
@@ -24,7 +24,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [chatUser, setChatUser] = useState(null);
   const [expandedUsers, setExpandedUsers] = useState({});
-  const [activePage, setActivePage] = useState("dashboard"); // 'dashboard' or 'userDetail'
+  const [activePage, setActivePage] = useState("dashboard");
   const [selectedUser, setSelectedUser] = useState(null);
 
   const fetchUsers = async () => {
@@ -83,6 +83,42 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleDeleteFile = async (userId, fileIndex) => {
+    if (window.confirm("Are you sure you want to delete this file?")) {
+      try {
+        await axios.delete(`https://code-3oqu.onrender.com/api/admin/user/${userId}/file/${fileIndex}`);
+        
+        // Update UI without refetching all data
+        if (activePage === "userDetail" && selectedUser?._id === userId) {
+          const updatedFiles = [...selectedUser.files];
+          updatedFiles.splice(fileIndex, 1);
+          setSelectedUser({ ...selectedUser, files: updatedFiles });
+        }
+        
+        fetchUsers(); // Refetch to update summary and user list
+      } catch (err) {
+        console.error("Delete File Error:", err);
+      }
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (window.confirm("Are you sure you want to delete this user and all their files?")) {
+      try {
+        await axios.delete(`https://code-3oqu.onrender.com/api/admin/user/${userId}`);
+        
+        if (activePage === "userDetail" && selectedUser?._id === userId) {
+          setActivePage("dashboard");
+        }
+        
+        fetchUsers();
+        fetchSummary();
+      } catch (err) {
+        console.error("Delete User Error:", err);
+      }
+    }
+  };
+
   const exportCSV = () => {
     const rows = [["Name", "Email", "Joined", "Files Completed", "Total Files"]];
     users.forEach((u) => {
@@ -132,14 +168,22 @@ const AdminDashboard = () => {
   if (activePage === "userDetail" && selectedUser) {
     return (
       <div className="p-4 sm:p-6 bg-gray-50 min-h-screen text-gray-800">
-        <div className="flex items-center mb-6">
-          <button 
-            onClick={() => setActivePage("dashboard")}
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mr-4"
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <button 
+              onClick={() => setActivePage("dashboard")}
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mr-4"
+            >
+              <FiChevronDown className="rotate-90 transform" /> Back
+            </button>
+            <h1 className="text-2xl font-bold">👤 User Details</h1>
+          </div>
+          <button
+            onClick={() => handleDeleteUser(selectedUser._id)}
+            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
           >
-            <FiChevronDown className="rotate-90 transform" /> Back
+            <FiTrash2 /> Delete User
           </button>
-          <h1 className="text-2xl font-bold">👤 User Details</h1>
         </div>
         
         <div className="bg-white rounded-xl shadow p-6 mb-6">
@@ -159,7 +203,7 @@ const AdminDashboard = () => {
           <h3 className="text-lg font-semibold mb-4">Files</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {selectedUser.files?.map((file, idx) => (
-              <div key={idx} className="border rounded-lg p-4 bg-gray-50">
+              <div key={idx} className="border rounded-lg p-4 bg-gray-50 relative">
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h4 className="font-medium">{file.originalName || `File ${idx + 1}`}</h4>
@@ -218,17 +262,25 @@ const AdminDashboard = () => {
                     )}
                   </div>
                   
-                  <button
-                    disabled={file.status === "Completed"}
-                    onClick={() => handleCompleteTask(selectedUser._id, idx)}
-                    className={`mt-2 text-sm px-3 py-1.5 rounded ${
-                      file.status === "Completed"
-                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                        : "bg-green-500 text-white hover:bg-green-600"
-                    }`}
-                  >
-                    {file.status === "Completed" ? "Completed" : "Mark as Complete"}
-                  </button>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      disabled={file.status === "Completed"}
+                      onClick={() => handleCompleteTask(selectedUser._id, idx)}
+                      className={`flex-1 text-sm px-3 py-1.5 rounded ${
+                        file.status === "Completed"
+                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                          : "bg-green-500 text-white hover:bg-green-600"
+                      }`}
+                    >
+                      {file.status === "Completed" ? "Completed" : "Mark Complete"}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteFile(selectedUser._id, idx)}
+                      className="flex items-center gap-1 bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600"
+                    >
+                      <FiTrash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -403,6 +455,13 @@ const AdminDashboard = () => {
                         >
                           View
                         </button>
+                        <button
+                          onClick={() => handleDeleteUser(user._id)}
+                          className="text-red-600 hover:text-red-800"
+                          title="Delete User"
+                        >
+                          <FiTrash2 />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -413,7 +472,7 @@ const AdminDashboard = () => {
                           <h4 className="font-medium mb-2 text-gray-700">Files:</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             {user.files.map((file, idx) => (
-                              <div key={idx} className="border rounded-lg p-3 bg-white">
+                              <div key={idx} className="border rounded-lg p-3 bg-white relative">
                                 <div className="flex justify-between items-start mb-2">
                                   <span className="font-medium text-sm">
                                     {file.originalName || `File ${idx + 1}`}
@@ -460,17 +519,26 @@ const AdminDashboard = () => {
                                     )}
                                   </div>
                                   
-                                  <button
-                                    disabled={file.status === "Completed"}
-                                    onClick={() => handleCompleteTask(user._id, idx)}
-                                    className={`mt-1 text-xs px-2 py-1 rounded ${
-                                      file.status === "Completed"
-                                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                                        : "bg-green-500 text-white hover:bg-green-600"
-                                    }`}
-                                  >
-                                    {file.status === "Completed" ? "Completed" : "Mark Complete"}
-                                  </button>
+                                  <div className="flex gap-2 mt-2">
+                                    <button
+                                      disabled={file.status === "Completed"}
+                                      onClick={() => handleCompleteTask(user._id, idx)}
+                                      className={`flex-1 text-xs px-2 py-1 rounded ${
+                                        file.status === "Completed"
+                                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                          : "bg-green-500 text-white hover:bg-green-600"
+                                      }`}
+                                    >
+                                      {file.status === "Completed" ? "Completed" : "Mark Complete"}
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteFile(user._id, idx)}
+                                      className="text-red-600 hover:text-red-800"
+                                      title="Delete File"
+                                    >
+                                      <FiTrash2 size={14} />
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             ))}
