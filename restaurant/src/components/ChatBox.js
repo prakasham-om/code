@@ -17,7 +17,7 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
   useEffect(() => {
     if (!userEmail) return;
 
-    socketRef.current = io("https://code-3oqu.onrender.com", {
+    socketRef.current = io("https://code-3oqu.onrender.com/", {
       withCredentials: true,
       transports: ["polling"],
       upgrade: false
