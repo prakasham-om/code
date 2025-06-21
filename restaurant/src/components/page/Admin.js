@@ -23,7 +23,7 @@ const AdminDashboard = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("https://code-fsue.vercel.app/api/admin/users", {
+      const res = await axios.get("https://code-3oqu.onrender.comapi/admin/users", {
         params: { date: selectedDate, search: searchTerm },
       });
       setUsers(res.data);
@@ -37,7 +37,7 @@ const AdminDashboard = () => {
 
   const fetchSummary = async () => {
     try {
-      const res = await axios.get("https://code-fsue.vercel.app/api/admin/summary");
+      const res = await axios.get("https://code-3oqu.onrender.comapi/admin/summary");
       setSummary(res.data);
     } catch (err) {
       console.error("Fetch Summary Error:", err);
@@ -46,7 +46,7 @@ const AdminDashboard = () => {
 
   const handleCompleteTask = async (userId, fileIndex) => {
     try {
-      await axios.put(`https://code-fsue.vercel.app/api/admin/user/${userId}/file/${fileIndex}`, {
+      await axios.put(`https://code-3oqu.onrender.comapi/admin/user/${userId}/file/${fileIndex}`, {
         status: "Completed",
       });
       fetchUsers();
@@ -64,9 +64,9 @@ const AdminDashboard = () => {
     formData.append("adminMessage", "Uploaded by admin");
 
     try {
-      const uploadRes = await axios.post("https://code-fsue.vercel.app/api/upload", formData);
+      const uploadRes = await axios.post("https://code-3oqu.onrender.comapi/upload", formData);
       const url = uploadRes.data.url || uploadRes.data.fileUrl;
-      await axios.put(`https://code-fsue.vercel.app/api/admin/user/${userId}/file/${fileIndex}`, {
+      await axios.put(`https://code-3oqu.onrender.comapi/admin/user/${userId}/file/${fileIndex}`, {
         adminFileUrl: url,
       });
       fetchUsers();
