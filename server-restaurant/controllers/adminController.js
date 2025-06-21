@@ -63,3 +63,77 @@ exports.getSummary = async (req, res) => {
     res.status(500).json({ message: "Error generating summary", error: err });
   }
 };
+exports.deleteUserFile = async (req, res) => {
+  const { userId, fileIndex } = req.params;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (fileIndex < 0 || fileIndex >= user.files.length) {
+      return res.status(400).json({ error: "Invalid file index" });
+    }
+
+    // Remove the file from the array
+    const deletedFile = user.files.splice(fileIndex, 1)[0];
+    await user.save();
+
+    res.json({ 
+      message: "File deleted successfully",
+      deletedFile
+    });
+  } catch (err) {
+    console.error("File deletion error:", err);
+    res.status(500).json({ error: "Failed to delete file" });
+  }
+};
+
+// ADMIN: Delete a user and all their files
+exports.deleteUser = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await User.findByIdAndDelete(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ 
+      message: "User deleted successfully",
+      deletedUser: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
+  } catch (err) {
+    console.error("User deletion error:", err);
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+};
+
+// ADMIN: Delete a specific file from all users (optional)
+exports.deleteFileType = async (req, res) => {
+  const { docType } = req.params;
+
+  try {
+    const result = await User.updateMany(
+      { "files.docType": docType },
+      { $pull: { files: { docType } } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ error: "No files of this type found" });
+    }
+
+    res.json({
+      message: `Deleted all ${docType} files`,
+      deletedCount: result.modifiedCount
+    });
+  } catch (err) {
+    console.error("File type deletion error:", err);
+    res.status(500).json({ error: "Failed to delete file type" });
+  }
+};
