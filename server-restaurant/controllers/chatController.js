@@ -1,5 +1,5 @@
 
-const Message = require("../models/Chat");
+const Message = require("../model/Chat");
 const { encrypt, decrypt } = require("../util/cryptoUtil");
 
 // Get messages between two users
