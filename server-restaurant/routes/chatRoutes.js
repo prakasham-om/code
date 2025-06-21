@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const chatController = require("../controllers/chatControler");
+const chatController = require("../controllers/chatController");
 
 // GET /api/messages?user1=email1&user2=email2
 router.get("/", chatController.getMessages);
