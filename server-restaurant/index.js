@@ -14,9 +14,7 @@ const server = http.createServer(app);
 // Allowed origins (with and without trailing slashes)
 const allowedOrigins = [
   "https://code-seven-jet.vercel.app",
-  "https://code-seven-jet.vercel.app/",
-  "https://code-fsue.vercel.app",
-  "https://code-fsue.vercel.app/"
+  "https://code-seven-jet.vercel.app/"
 ];
 
 // CORS configuration function
@@ -31,13 +29,13 @@ const corsOptions = {
       : origin;
     
     // Check if normalized origin is in allowed list
-    const isAllowed = allowedOrigins.some(allowed => 
-      allowed === normalizedOrigin || allowed === normalizedOrigin + '/'
-    );
+    const isAllowed = allowedOrigins.includes(normalizedOrigin) || 
+                     allowedOrigins.includes(normalizedOrigin + '/');
     
     if (isAllowed) {
       callback(null, true);
     } else {
+      console.error(`CORS blocked: ${origin} not allowed`);
       callback(new Error(`Origin '${origin}' not allowed by CORS`));
     }
   },
@@ -59,13 +57,13 @@ const io = new Server(server, {
         ? origin.slice(0, -1) 
         : origin;
       
-      const isAllowed = allowedOrigins.some(allowed => 
-        allowed === normalizedOrigin || allowed === normalizedOrigin + '/'
-      );
+      const isAllowed = allowedOrigins.includes(normalizedOrigin) || 
+                       allowedOrigins.includes(normalizedOrigin + '/');
       
       if (isAllowed) {
         callback(null, true);
       } else {
+        console.error(`Socket.IO CORS blocked: ${origin} not allowed`);
         callback(new Error(`Socket.IO origin '${origin}' not allowed`));
       }
     },
