@@ -10,15 +10,26 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-app.use(cors({ origin: "https://code-seven-jet.vercel.app/" }));
-const io = new Server(server, {
-  cors: { origin: "https://code-seven-jet.vercel.app/", methods: ["GET", "POST"] },
-});
+// ✅ FRONTEND URL (no trailing slash)
+const allowedOrigin = "https://code-seven-jet.vercel.app";
 
-app.use(cors());
+// ✅ Apply CORS properly
+app.use(cors({
+  origin: allowedOrigin,
+  credentials: true,
+}));
 app.use(express.json());
 
-// MongoDB connection
+// ✅ Socket.IO setup with matching CORS
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigin,
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+// ✅ MongoDB connection
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -27,7 +38,7 @@ mongoose.connect(process.env.MONGODB_URI, {
   server.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 }).catch(err => console.error("❌ MongoDB connection error:", err));
 
-// Routes
+// ✅ Routes
 const adminRoutes = require("./routes/adminRoute");
 const userRoutes = require("./routes/userRoute");
 const chatRoutes = require("./routes/chatRoutes");
@@ -36,9 +47,9 @@ app.use("/api", adminRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/messages", chatRoutes);
 
-// Socket.io
+// ✅ Socket.io Chat Logic
 const Message = require("./model/Chat");
-const connected = {}; // email -> socket.id
+const connected = {}; // Maps user email to socket ID
 
 io.on("connection", (socket) => {
   console.log("🟢 Socket connected:", socket.id);
