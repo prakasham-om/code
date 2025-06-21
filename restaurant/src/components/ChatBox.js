@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { IoSend, IoClose, IoTrash } from "react-icons/io5";
+import { FiMessageCircle } from "react-icons/fi";
 import io from "socket.io-client";
 
 const ADMIN_EMAIL = "rohitsahoo866@gmail.com";
@@ -21,7 +22,7 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
     socketRef.current = io("https://code-3oqu.onrender.com/", {
       withCredentials: true,
       transports: ["polling"],
-      upgrade: false
+      upgrade: false,
     });
 
     const socket = socketRef.current;
@@ -30,12 +31,7 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
 
     const fetchMessages = async () => {
       try {
-        const sender = isAdmin ? ADMIN_EMAIL : userEmail;
-        const receiver = isAdmin ? userEmail : ADMIN_EMAIL;
-
-        const res = await fetch(
-          `https://code-3oqu.onrender.com/api/messages?user1=${sender}&user2=${receiver}`
-        );
+        const res = await fetch(`https://code-3oqu.onrender.com/api/messages/${userEmail}`);
         const data = await res.json();
         setMessages(data);
       } catch (err) {
@@ -48,9 +44,9 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
     socket.on("receive_message", (msg) => {
       setMessages((prev) => [...prev, msg]);
     });
-    
+
     socket.on("message_deleted", (deletedId) => {
-      setMessages(prev => prev.filter(msg => msg._id !== deletedId));
+      setMessages((prev) => prev.filter((msg) => msg._id !== deletedId));
     });
 
     return () => {
@@ -77,18 +73,13 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
     };
 
     try {
-      // Save message to database first
       const response = await fetch("https://code-3oqu.onrender.com/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(messageData)
+        body: JSON.stringify(messageData),
       });
-      
-      const savedMessage = await response.json();
-      
-      // Emit socket event with saved message (including _id)
-      socketRef.current?.emit("send_message", savedMessage);
 
+      const savedMessage = await response.json();
       setMessages((prev) => [...prev, savedMessage]);
       setNewMessage("");
     } catch (err) {
@@ -98,18 +89,15 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
 
   const handleDeleteMessage = async (messageId) => {
     if (!window.confirm("Are you sure you want to delete this message?")) return;
-    
+
     try {
       setIsDeleting(true);
       await fetch(`https://code-3oqu.onrender.com/api/messages/${messageId}`, {
-        method: "DELETE"
+        method: "DELETE",
       });
-      
-      // Emit deletion event
+
       socketRef.current?.emit("delete_message", messageId);
-      
-      // Update local state
-      setMessages(prev => prev.filter(msg => msg._id !== messageId));
+      setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
     } catch (err) {
       console.error("Failed to delete message:", err);
     } finally {
@@ -154,7 +142,7 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
               {isAdmin ? "Admin Mode" : "User Mode"}
             </span>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-1 hover:bg-blue-700 rounded-full transition-colors"
           >
@@ -195,7 +183,7 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
                           })}
                         </p>
                         {(isAdmin || isSender) && (
-                          <button 
+                          <button
                             onClick={() => handleDeleteMessage(msg._id)}
                             disabled={isDeleting}
                             className={`ml-2 opacity-0 group-hover:opacity-70 transition-opacity ${
@@ -229,8 +217,8 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
             onClick={handleSend}
             disabled={!newMessage.trim()}
             className={`p-3 rounded-full ${
-              newMessage.trim() 
-                ? "bg-blue-600 text-white hover:bg-blue-700" 
+              newMessage.trim()
+                ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-200 text-gray-400"
             } transition-colors`}
           >
