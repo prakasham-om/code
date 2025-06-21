@@ -2,7 +2,7 @@
   "name": "restaurant",
   "version": "0.1.0",
   "private": true,
-  "proxy": "code-git-master-rohis-projects-40be3d9d.vercel.app",
+  "proxy": "https://code-seven-jet.vercel.app/",
   "dependencies": {
     "@reduxjs/toolkit": "^1.9.1",
     "@stripe/react-stripe-js": "^1.16.2",
