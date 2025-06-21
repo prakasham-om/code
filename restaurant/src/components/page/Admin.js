@@ -61,6 +61,7 @@ const AdminDashboard = () => {
       fetchSummary();
     } catch (err) {
       console.error("Complete Task Error:", err);
+      alert("Failed to complete task. Please try again.");
     }
   };
 
@@ -72,7 +73,11 @@ const AdminDashboard = () => {
     formData.append("adminMessage", "Uploaded by admin");
 
     try {
-      const uploadRes = await axios.post("https://code-3oqu.onrender.com/api/upload", formData);
+      const uploadRes = await axios.post("https://code-3oqu.onrender.com/api/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
+      });
       const url = uploadRes.data.url || uploadRes.data.fileUrl;
       await axios.put(`https://code-3oqu.onrender.com/api/admin/user/${userId}/file/${fileIndex}`, {
         adminFileUrl: url,
@@ -80,11 +85,12 @@ const AdminDashboard = () => {
       fetchUsers();
     } catch (err) {
       console.error("Admin File Upload Error:", err);
+      alert("File upload failed. Please try again.");
     }
   };
 
   const handleDeleteFile = async (userId, fileIndex) => {
-    if (window.confirm("Are you sure you want to delete this file?")) {
+    if (window.confirm("Are you sure you want to delete this file? This action cannot be undone.")) {
       try {
         await axios.delete(`https://code-3oqu.onrender.com/api/admin/user/${userId}/file/${fileIndex}`);
         
@@ -96,14 +102,16 @@ const AdminDashboard = () => {
         }
         
         fetchUsers(); // Refetch to update summary and user list
+        fetchSummary(); // Update revenue summary
       } catch (err) {
         console.error("Delete File Error:", err);
+        alert("Failed to delete file. Please try again.");
       }
     }
   };
 
   const handleDeleteUser = async (userId) => {
-    if (window.confirm("Are you sure you want to delete this user and all their files?")) {
+    if (window.confirm("Are you sure you want to delete this user and all their files? This action cannot be undone.")) {
       try {
         await axios.delete(`https://code-3oqu.onrender.com/api/admin/user/${userId}`);
         
@@ -115,6 +123,7 @@ const AdminDashboard = () => {
         fetchSummary();
       } catch (err) {
         console.error("Delete User Error:", err);
+        alert("Failed to delete user. Please try again.");
       }
     }
   };
@@ -158,7 +167,7 @@ const AdminDashboard = () => {
       });
       return map;
     }, {})
-  );
+  ).sort((a, b) => new Date(a.date) - new Date(b.date));
 
   useEffect(() => {
     fetchUsers();
@@ -174,7 +183,7 @@ const AdminDashboard = () => {
               onClick={() => setActivePage("dashboard")}
               className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mr-4"
             >
-              <FiChevronDown className="rotate-90 transform" /> Back
+              <FiChevronDown className="rotate-90 transform" /> Back to Dashboard
             </button>
             <h1 className="text-2xl font-bold">👤 User Details</h1>
           </div>
@@ -201,90 +210,101 @@ const AdminDashboard = () => {
           </div>
           
           <h3 className="text-lg font-semibold mb-4">Files</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {selectedUser.files?.map((file, idx) => (
-              <div key={idx} className="border rounded-lg p-4 bg-gray-50 relative">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h4 className="font-medium">{file.originalName || `File ${idx + 1}`}</h4>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      file.status === "Completed" 
-                        ? "bg-green-100 text-green-700" 
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}>
-                      {file.status}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => setChatUser(selectedUser)}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      <FiMessageCircle />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-3 text-sm">
-                  <div>
-                    <p className="text-gray-500 text-xs">User File:</p>
-                    <a 
-                      href={file.fileUrl} 
-                      download
-                      className="text-blue-600 hover:underline truncate block"
-                    >
-                      Download
-                    </a>
+          
+          {selectedUser.files?.length === 0 ? (
+            <p className="text-center text-gray-500 py-4">No files uploaded yet</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {selectedUser.files?.map((file, idx) => (
+                <div key={idx} className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="font-medium">{file.originalName || `File ${idx + 1}`}</h4>
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        file.status === "Completed" 
+                          ? "bg-green-100 text-green-700" 
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}>
+                        {file.status}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setChatUser(selectedUser)}
+                        className="text-blue-600 hover:text-blue-800"
+                        title="Chat with user"
+                      >
+                        <FiMessageCircle />
+                      </button>
+                    </div>
                   </div>
                   
-                  <div>
-                    <p className="text-gray-500 text-xs">Admin File:</p>
-                    {file.adminFileUrl ? (
+                  <div className="grid grid-cols-1 gap-3 text-sm">
+                    <div>
+                      <p className="text-gray-500 text-xs">User File:</p>
                       <a 
-                        href={file.adminFileUrl} 
+                        href={file.fileUrl} 
                         download
                         className="text-blue-600 hover:underline truncate block"
+                        target="_blank"
+                        rel="noreferrer"
                       >
                         Download
                       </a>
-                    ) : (
-                      <div className="mt-1">
-                        <label className="text-blue-600 hover:text-blue-800 cursor-pointer">
-                          <span className="text-xs">Upload file</span>
-                          <input 
-                            type="file"
-                            accept="application/pdf"
-                            onChange={(e) => handleAdminFileUpload(e, selectedUser._id, idx)}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      disabled={file.status === "Completed"}
-                      onClick={() => handleCompleteTask(selectedUser._id, idx)}
-                      className={`flex-1 text-sm px-3 py-1.5 rounded ${
-                        file.status === "Completed"
-                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                          : "bg-green-500 text-white hover:bg-green-600"
-                      }`}
-                    >
-                      {file.status === "Completed" ? "Completed" : "Mark Complete"}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteFile(selectedUser._id, idx)}
-                      className="flex items-center gap-1 bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600"
-                    >
-                      <FiTrash2 size={14} />
-                    </button>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-500 text-xs">Admin File:</p>
+                      {file.adminFileUrl ? (
+                        <a 
+                          href={file.adminFileUrl} 
+                          download
+                          className="text-blue-600 hover:underline truncate block"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Download
+                        </a>
+                      ) : (
+                        <div className="mt-1">
+                          <label className="text-blue-600 hover:text-blue-800 cursor-pointer text-sm">
+                            <span>Upload admin file</span>
+                            <input 
+                              type="file"
+                              accept="application/pdf,image/*"
+                              onChange={(e) => handleAdminFileUpload(e, selectedUser._id, idx)}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        disabled={file.status === "Completed"}
+                        onClick={() => handleCompleteTask(selectedUser._id, idx)}
+                        className={`flex-1 text-sm px-3 py-1.5 rounded ${
+                          file.status === "Completed"
+                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                            : "bg-green-500 text-white hover:bg-green-600"
+                        }`}
+                      >
+                        {file.status === "Completed" ? "Completed" : "Mark Complete"}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteFile(selectedUser._id, idx)}
+                        className="flex items-center gap-1 bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600"
+                        title="Delete file"
+                      >
+                        <FiTrash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
         
         {chatUser && (
@@ -440,25 +460,28 @@ const AdminDashboard = () => {
                         <button
                           onClick={() => toggleUserExpand(user._id)}
                           className="text-blue-600 hover:text-blue-800"
+                          title={expandedUsers[user._id] ? "Collapse" : "Expand"}
                         >
                           {expandedUsers[user._id] ? <FiChevronUp /> : <FiChevronDown />}
                         </button>
                         <button
                           onClick={() => setChatUser(user)}
                           className="text-blue-600 hover:text-blue-800"
+                          title="Chat with user"
                         >
                           <FiMessageCircle />
                         </button>
                         <button
                           onClick={() => handleUserSelect(user)}
                           className="text-sm bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
+                          title="View details"
                         >
                           View
                         </button>
                         <button
                           onClick={() => handleDeleteUser(user._id)}
                           className="text-red-600 hover:text-red-800"
-                          title="Delete User"
+                          title="Delete user"
                         >
                           <FiTrash2 />
                         </button>
@@ -472,7 +495,7 @@ const AdminDashboard = () => {
                           <h4 className="font-medium mb-2 text-gray-700">Files:</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             {user.files.map((file, idx) => (
-                              <div key={idx} className="border rounded-lg p-3 bg-white relative">
+                              <div key={idx} className="border rounded-lg p-3 bg-white">
                                 <div className="flex justify-between items-start mb-2">
                                   <span className="font-medium text-sm">
                                     {file.originalName || `File ${idx + 1}`}
@@ -492,6 +515,8 @@ const AdminDashboard = () => {
                                       href={file.fileUrl} 
                                       download
                                       className="text-blue-600 hover:underline"
+                                      target="_blank"
+                                      rel="noreferrer"
                                     >
                                       Download User File
                                     </a>
@@ -503,6 +528,8 @@ const AdminDashboard = () => {
                                         href={file.adminFileUrl} 
                                         download
                                         className="text-blue-600 hover:underline"
+                                        target="_blank"
+                                        rel="noreferrer"
                                       >
                                         Download Admin File
                                       </a>
@@ -511,7 +538,7 @@ const AdminDashboard = () => {
                                         <span>Upload Admin File</span>
                                         <input 
                                           type="file"
-                                          accept="application/pdf"
+                                          accept="application/pdf,image/*"
                                           onChange={(e) => handleAdminFileUpload(e, user._id, idx)}
                                           className="hidden"
                                         />
@@ -534,7 +561,7 @@ const AdminDashboard = () => {
                                     <button
                                       onClick={() => handleDeleteFile(user._id, idx)}
                                       className="text-red-600 hover:text-red-800"
-                                      title="Delete File"
+                                      title="Delete file"
                                     >
                                       <FiTrash2 size={14} />
                                     </button>
