@@ -27,6 +27,16 @@ const io = new Server(server, {
 
 app.use(express.json());
 
+// Routes (unchanged)
+const adminRoutes = require("./routes/adminRoute");
+const userRoutes = require("./routes/userRoute");
+const chatRoutes = require("./routes/chatRoutes");
+
+app.use("/api", adminRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/messages", chatRoutes);
+
+
 // MongoDB connection (unchanged)
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
@@ -36,14 +46,6 @@ mongoose.connect(process.env.MONGODB_URI, {
   server.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 }).catch(err => console.error("❌ MongoDB connection error:", err));
 
-// Routes (unchanged)
-const adminRoutes = require("./routes/adminRoute");
-const userRoutes = require("./routes/userRoute");
-const chatRoutes = require("./routes/chatRoutes");
-
-app.use("/api", adminRoutes);
-app.use("/api/user", userRoutes);
-app.use("/api/messages", chatRoutes);
 
 // Socket.io (unchanged)
 const Message = require("./model/Chat");
