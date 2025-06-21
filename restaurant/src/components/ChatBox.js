@@ -5,7 +5,8 @@ import io from "socket.io-client";
 
 const socket = const socket = io("https://code-fsue.vercel.app", {
   withCredentials: true,
-  transports: ["polling"]
+  transports: ["polling"], // Force polling only
+  upgrade: false           // Disable WebSocket attempt
 });
 // Adjust if backend URL changes
 
