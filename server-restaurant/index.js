@@ -12,7 +12,7 @@ const app = express();
 const server = http.createServer(app);
 
 // Frontend URL
-const FRONTEND_URL = "https://code-fsue.vercel.app";
+const FRONTEND_URL = "https://code-seven-jet.vercel.app/";
 
 // CORS setup
 app.use(cors({ 
