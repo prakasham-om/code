@@ -11,7 +11,7 @@ const app = express();
 const server = http.createServer(app);
 
 // Fixed CORS configuration
-const FRONTEND_URL = "https://code-seven-jet.vercel.app/"; // No trailing slash
+const FRONTEND_URL = "https://code-seven-jet.vercel.app"; // No trailing slash
 
 app.use(cors({ origin: FRONTEND_URL }));
 
