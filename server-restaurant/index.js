@@ -12,7 +12,7 @@ const server = http.createServer(app);
 
 app.use(cors({ origin: "code-git-master-rohis-projects-40be3d9d.vercel.app" }));
 const io = new Server(server, {
-  cors: { origin: "code-fsue-memrdhram-rohis-projects-40be3d9d.vercel.app", methods: ["GET", "POST"] },
+  cors: { origin: "https://code-fsue.vercel.app/", methods: ["GET", "POST"] },
 });
 
 app.use(cors());
