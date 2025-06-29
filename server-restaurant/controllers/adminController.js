@@ -21,6 +21,25 @@ exports.getUsers = async (req, res) => {
   }
 };
 
+exports.markTaskCompleted = async (req, res) => {
+  const { userId, fileIndex } = req.params;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user || !user.files[fileIndex]) {
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    user.files[fileIndex].status = "Completed";
+    await user.save();
+
+    res.json({ message: "Task marked as Completed", file: user.files[fileIndex] });
+  } catch (err) {
+    console.error("❌ Task completion error:", err);
+    res.status(500).json({ message: "Failed to complete task", error: err });
+  }
+};
+
 // 📌 PUT: Admin update single file inside user's files[]
 exports.updateUserFile = async (req, res) => {
   const { userId, fileIndex } = req.params;
