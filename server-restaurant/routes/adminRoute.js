@@ -6,6 +6,7 @@ const adminController = require("../controllers/adminController");
 // Get filtered users
 router.get("/admin/users",  adminController.getUsers); // ?date=2025-06-19&search=alice
 
+router.put("/admin/user/:userId/file/:fileIndex/complete", adminController.markTaskCompleted);
 // Update user file
 router.put("/admin/user/:userId/file/:fileIndex",adminController.updateUserFile);
 
