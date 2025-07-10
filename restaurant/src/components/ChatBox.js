@@ -10,6 +10,7 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   const chatEndRef = useRef(null);
   const socketRef = useRef(null);
 
@@ -19,16 +20,34 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
   useEffect(() => {
     if (!userEmail) return;
 
+    // Initialize socket connection
     socketRef.current = io("https://code-3oqu.onrender.com/", {
       withCredentials: true,
-      transports: ["polling"],
-      upgrade: false,
+      transports: ["websocket", "polling"], // Add websocket as preferred transport
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
     });
 
     const socket = socketRef.current;
 
-    socket.emit("join", { email: userEmail });
+    // Socket event listeners
+    socket.on("connect", () => {
+      setIsConnected(true);
+      console.log("Connected to socket server");
+      socket.emit("join", { email: userEmail });
+    });
 
+    socket.on("disconnect", () => {
+      setIsConnected(false);
+      console.log("Disconnected from socket server");
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Connection error:", err);
+    });
+
+    // Fetch initial messages
     const fetchMessages = async () => {
       try {
         const res = await fetch(`https://code-3oqu.onrender.com/api/messages/${userEmail}`);
@@ -41,6 +60,7 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
 
     fetchMessages();
 
+    // Message handlers
     socket.on("receive_message", (msg) => {
       setMessages((prev) => [...prev, msg]);
     });
@@ -50,6 +70,10 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
     });
 
     return () => {
+      // Clean up event listeners
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off("connect_error");
       socket.off("receive_message");
       socket.off("message_deleted");
       socket.disconnect();
@@ -61,7 +85,7 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !isConnected) return;
 
     const sender = isAdmin ? ADMIN_EMAIL : userEmail;
     const receiver = isAdmin ? userEmail : ADMIN_EMAIL;
@@ -139,7 +163,10 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
               💬 {isAdmin ? `Chat with ${userEmail}` : "Chat with Admin"}
             </span>
             <span className="text-xs opacity-80 block mt-1">
-              {isAdmin ? "Admin Mode" : "User Mode"}
+              {isAdmin ? "Admin Mode" : "User Mode"} •{" "}
+              <span className={isConnected ? "text-green-300" : "text-yellow-300"}>
+                {isConnected ? "Connected" : "Connecting..."}
+              </span>
             </span>
           </div>
           <button
@@ -215,9 +242,9 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={handleSend}
-            disabled={!newMessage.trim()}
+            disabled={!newMessage.trim() || !isConnected}
             className={`p-3 rounded-full ${
-              newMessage.trim()
+              newMessage.trim() && isConnected
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-200 text-gray-400"
             } transition-colors`}
