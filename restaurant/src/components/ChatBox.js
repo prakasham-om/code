@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { IoSend, IoClose, IoTrash } from "react-icons/io5";
+import { IoSend, IoClose, IoTrash, IoRefresh } from "react-icons/io5";
 import { FiMessageCircle } from "react-icons/fi";
 import io from "socket.io-client";
 
@@ -11,72 +11,109 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
   const [newMessage, setNewMessage] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(null);
   const chatEndRef = useRef(null);
   const socketRef = useRef(null);
 
   const storedUser = JSON.parse(localStorage.getItem("user"));
   const userEmail = isAdmin ? propUserEmail : storedUser?.email;
 
-  useEffect(() => {
+  // Initialize socket connection
+  const initSocket = () => {
     if (!userEmail) return;
 
-    // Initialize socket connection
+    console.log("Initializing socket connection...");
     socketRef.current = io("https://code-3oqu.onrender.com/", {
       withCredentials: true,
-      transports: ["websocket", "polling"], // Add websocket as preferred transport
+      transports: ["websocket", "polling"],
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      randomizationFactor: 0.5,
     });
 
     const socket = socketRef.current;
 
-    // Socket event listeners
     socket.on("connect", () => {
+      console.log("Socket connected, joining room...");
       setIsConnected(true);
-      console.log("Connected to socket server");
+      setConnectionError(null);
       socket.emit("join", { email: userEmail });
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", (reason) => {
+      console.log("Socket disconnected:", reason);
       setIsConnected(false);
-      console.log("Disconnected from socket server");
+      if (reason === "io server disconnect") {
+        // The disconnection was initiated by the server, need to manually reconnect
+        socket.connect();
+      }
     });
 
     socket.on("connect_error", (err) => {
-      console.error("Connection error:", err);
+      console.error("Socket connection error:", err);
+      setConnectionError(err.message || "Connection failed");
+      setIsConnected(false);
     });
 
-    // Fetch initial messages
-    const fetchMessages = async () => {
-      try {
-        const res = await fetch(`https://code-3oqu.onrender.com/api/messages/${userEmail}`);
-        const data = await res.json();
-        setMessages(data);
-      } catch (err) {
-        console.error("Chat load failed:", err);
-      }
-    };
-
-    fetchMessages();
-
-    // Message handlers
     socket.on("receive_message", (msg) => {
+      console.log("Received new message:", msg);
       setMessages((prev) => [...prev, msg]);
     });
 
     socket.on("message_deleted", (deletedId) => {
+      console.log("Message deleted:", deletedId);
       setMessages((prev) => prev.filter((msg) => msg._id !== deletedId));
     });
 
+    socket.on("error", (err) => {
+      console.error("Socket error:", err);
+      setConnectionError(err.message || "Socket error occurred");
+    });
+
+    return socket;
+  };
+
+  const fetchMessages = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch(`https://code-3oqu.onrender.com/api/messages/${userEmail}`);
+      const data = await res.json();
+      setMessages(data);
+      setIsLoading(false);
+    } catch (err) {
+      console.error("Chat load failed:", err);
+      setConnectionError("Failed to load messages");
+      setIsLoading(false);
+    }
+  };
+
+  const reconnectSocket = () => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current.connect();
+    }
+  };
+
+  useEffect(() => {
+    if (!userEmail) return;
+
+    const socket = initSocket();
+    fetchMessages();
+
     return () => {
-      // Clean up event listeners
-      socket.off("connect");
-      socket.off("disconnect");
-      socket.off("connect_error");
-      socket.off("receive_message");
-      socket.off("message_deleted");
-      socket.disconnect();
+      if (socket) {
+        console.log("Cleaning up socket connection...");
+        socket.off("connect");
+        socket.off("disconnect");
+        socket.off("connect_error");
+        socket.off("receive_message");
+        socket.off("message_deleted");
+        socket.off("error");
+        socket.disconnect();
+      }
     };
   }, [userEmail, isAdmin]);
 
@@ -103,11 +140,16 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
         body: JSON.stringify(messageData),
       });
 
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
       const savedMessage = await response.json();
       setMessages((prev) => [...prev, savedMessage]);
       setNewMessage("");
     } catch (err) {
       console.error("Failed to send message:", err);
+      setConnectionError(err.message || "Failed to send message");
     }
   };
 
@@ -116,17 +158,28 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
 
     try {
       setIsDeleting(true);
-      await fetch(`https://code-3oqu.onrender.com/api/messages/${messageId}`, {
+      const response = await fetch(`https://code-3oqu.onrender.com/api/messages/${messageId}`, {
         method: "DELETE",
       });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete message");
+      }
 
       socketRef.current?.emit("delete_message", messageId);
       setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
     } catch (err) {
       console.error("Failed to delete message:", err);
+      setConnectionError(err.message || "Failed to delete message");
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setConnectionError(null);
+    await fetchMessages();
+    reconnectSocket();
   };
 
   if (!userEmail) {
@@ -167,6 +220,15 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
               <span className={isConnected ? "text-green-300" : "text-yellow-300"}>
                 {isConnected ? "Connected" : "Connecting..."}
               </span>
+              {connectionError && (
+                <button
+                  onClick={handleRefresh}
+                  className="ml-2 text-white hover:text-yellow-200 flex items-center"
+                  title="Reconnect"
+                >
+                  <IoRefresh size={14} />
+                </button>
+              )}
             </span>
           </div>
           <button
@@ -177,8 +239,25 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
           </button>
         </div>
 
+        {connectionError && (
+          <div className="bg-red-100 text-red-700 px-4 py-2 text-sm flex justify-between items-center">
+            <span>{connectionError}</span>
+            <button
+              onClick={handleRefresh}
+              className="text-red-700 hover:text-red-900 flex items-center"
+              title="Retry"
+            >
+              <IoRefresh size={16} />
+            </button>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto px-3 py-4 bg-gradient-to-b from-gray-50 to-gray-100 space-y-3 text-sm scroll-smooth">
-          {messages.length === 0 ? (
+          {isLoading ? (
+            <div className="h-full flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-4">
               <div className="bg-gray-200 border-2 border-dashed rounded-full w-16 h-16 flex items-center justify-center mb-4">
                 <FiMessageCircle size={32} className="text-gray-400" />
@@ -238,6 +317,7 @@ const ChatBox = ({ userEmail: propUserEmail, onClose, isAdmin = false }) => {
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Type your message..."
             className="flex-1 px-4 py-3 text-sm border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400"
+            disabled={!isConnected}
           />
           <motion.button
             whileTap={{ scale: 0.9 }}
